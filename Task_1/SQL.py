@@ -23,7 +23,15 @@ def question_1():
     Return the `Name`, `Surname` and `CustomerID`
     """
 
-    qry = """____________________"""
+    qry = """ 
+    SELECT Name, Surname, CustomerID 
+    FROM customers 
+    WHERE CustomerID IN (
+    SELECT CustomerID 
+    FROM customers 
+    GROUP BY CustomerID 
+    HAVING COUNT(*) > 1);
+    """
 
     return qry
 
@@ -33,20 +41,27 @@ def question_2():
     Return the `Name`, `Surname` and `Income` of all female customers in the dataset in descending order of income
     """
 
-    qry = """____________________"""
+    qry = """ SELECT Name, Surname, Income
+    FROM customers
+    WHERE Lower(Gender) = 'female'
+    ORDER BY Income DESC;
+    """
 
     return qry
 
 
 def question_3():
     """
-    Calculate the percentage of approved loans by LoanTerm, with the result displayed as a percentage out of 100.
-    ie 50 not 0.5
-    There is only 1 loan per customer ID.
+    Calculates the percentage(a whole number out of 100) of approved loans broken down by individual loan terms.
+    
+    Returns:
+        str: A DuckDB-compliant SQL query string.
     """
 
-    qry = """____________________"""
-
+    qry = """ SELECT LoanTerm, (COUNT(CASE WHEN Lower(ApprovalStatus) = 'approved' THEN 1 END) * 100.0) / COUNT(*) AS Percentage_Approved
+    FROM loans
+    GROUP BY LoanTerm; 
+    """
     return qry
 
 
@@ -56,7 +71,13 @@ def question_4():
     Return columns `CustomerClass` and `Count`
     """
 
-    qry = """____________________"""
+    qry = """
+    SELECT 
+    CustomerClass, 
+    COUNT(*) AS Count
+    FROM credit
+    GROUP BY CustomerClass;
+    """
 
     return qry
 
@@ -66,6 +87,10 @@ def question_5():
     Make use of the UPDATE function to amend/fix the following: Customers with a CreditScore between and including 600 to 650 must be classified as CustomerClass C.
     """
 
-    qry = """____________________"""
+    qry = """
+    UPDATE credit
+    SET CustomerClass = 'C'
+    WHERE CreditScore BETWEEN 600 AND 650;
+    """
 
     return qry
