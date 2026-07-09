@@ -239,7 +239,8 @@ def question_4(df_balances):
     Returns:
         float: The predicted total loss for the second year.
     """
-    # Use the probability of default from Question 2
+    # Use the probability of default from Question 2 - 
+    #more appropriate probability-only counts loans that have missed more than 15% of their total expected payments
     probability_of_default = question_2(df_scheduled, df_balances) / 100
 
     # Find the latest month available in the dataset
