@@ -24,14 +24,14 @@ def question_1():
 
     qry = """
     SELECT 
-    credit.CustomerClass,
-    AVG(customers.Income) AS AverageIncome
+    credit.CustomerClass,
+    AVG(customers.Income) AS AverageIncome
     FROM 
-    customers
+    customers
     JOIN 
-    credit ON customers.CustomerID = credit.CustomerID
+    credit ON customers.CustomerID = credit.CustomerID
     GROUP BY 
-    credit.CustomerClass;
+    credit.CustomerClass;
     """
 
     return qry
@@ -43,7 +43,7 @@ def question_2():
     Ensure consistent use of either the abbreviated or full version of each province, matching the format found in the customer table.
     """
 
-   qry = """  
+    qry = """
     SELECT 
         CASE 
             WHEN Region = 'EasternCape' THEN 'EC'
@@ -112,27 +112,28 @@ def question_4():
     Hint: there should be 12x CustomerID = 1.
     """
 
-    qry = """CREATE TABLE timeline AS
-WITH base_timeline AS (
-    SELECT DISTINCT c.CustomerID, m.MonthName, m.MonthID
+    qry = """
+    DROP TABLE IF EXISTS timeline;
+    
+    CREATE TABLE timeline AS
+    SELECT
+        c.CustomerID,
+        m.MonthName,
+        COALESCE(COUNT(r.RepaymentID), 0) AS NumberOfRepayments,
+        COALESCE(SUM(r.Amount), 0) AS AmountTotal
     FROM customers c
     CROSS JOIN months m
-)
-SELECT 
-    b.CustomerID,
-    b.MonthName,
-    COALESCE(COUNT(r.RepaymentID), 0) AS NumberOfRepayments,
-    COALESCE(SUM(r.Amount), 0) AS AmountTotal
-FROM 
-    base_timeline b
-LEFT JOIN 
-    repayments r ON b.CustomerID = r.CustomerID 
-    AND b.MonthID = EXTRACT(MONTH FROM r.RepaymentDate) -- Adjust column name if different
-    AND EXTRACT(HOUR FROM r.RepaymentDate) BETWEEN 6 AND 17 -- 6am to 6pm exclusive of 18:00:01
-GROUP BY 
-    b.CustomerID, b.MonthName, b.MonthID
-ORDER BY 
-    b.CustomerID, b.MonthID;
+    LEFT JOIN repayments r
+        ON c.CustomerID = r.CustomerID
+        AND EXTRACT(MONTH FROM r.RepaymentDate) = m.MonthID
+        AND EXTRACT(HOUR FROM r.RepaymentDate) BETWEEN 6 AND 17
+    GROUP BY
+        c.CustomerID,
+        m.MonthID,
+        m.MonthName
+    ORDER BY
+        c.CustomerID,
+        m.MonthID;
     """
 
     return qry
@@ -213,27 +214,29 @@ def question_6():
     Also return a result set for this table (ie SELECT * FROM corrected_customers)
     """
 
-    qry = """CREATE TABLE corrected_customers AS
-WITH counted_fleet AS (
+    qry = """
+    DROP TABLE IF EXISTS corrected_customers;
+    CREATE TABLE corrected_customers AS 
+    WITH counted_fleet AS (
+        SELECT 
+            CustomerID, Age, Gender,
+            COUNT(*) OVER(PARTITION BY Gender) AS GroupSize,
+            ROW_NUMBER() OVER(PARTITION BY Gender ORDER BY CustomerID) AS RowNum
+        FROM customers
+    )
     SELECT 
-        CustomerID, Age, Gender,
-        COUNT(*) OVER(PARTITION BY Gender) AS GroupSize,
-        ROW_NUMBER() OVER(PARTITION BY Gender ORDER BY CustomerID) AS RowNum
-    FROM customers
-)
-SELECT 
-    CustomerID,
-    Age,
-    CASE 
-        WHEN RowNum = 1 THEN LEAD(Age, GroupSize - 2) OVER(PARTITION BY Gender ORDER BY CustomerID)
-        WHEN RowNum = 2 THEN LEAD(Age, GroupSize - 2) OVER(PARTITION BY Gender ORDER BY CustomerID)
-        ELSE LAG(Age, 2) OVER(PARTITION BY Gender ORDER BY CustomerID)
-    END AS CorrectedAge,
-    Gender
-FROM 
-    counted_fleet;
-
-SELECT * FROM corrected_customers;"""
+        CustomerID,
+        Age,
+        CASE 
+            WHEN RowNum = 1 THEN LEAD(Age, GroupSize - 2) OVER(PARTITION BY Gender ORDER BY CustomerID)
+            WHEN RowNum = 2 THEN LEAD(Age, GroupSize - 2) OVER(PARTITION BY Gender ORDER BY CustomerID)
+            ELSE LAG(Age, 2) OVER(PARTITION BY Gender ORDER BY CustomerID)
+        END AS CorrectedAge,
+        Gender
+    FROM 
+        counted_fleet;
+    SELECT * FROM corrected_customers;
+    """
 
     return qry
 
@@ -254,6 +257,47 @@ def question_7():
     Return columns: `CustomerID`, `Age`, `CorrectedAge`, `Gender`, `AgeCategory`, `Rank`
     """
 
-    qry = """____________________"""
+    qry = """
+    WITH repayment_totals AS (
+        SELECT
+            CustomerID,
+            COUNT(*) AS TotalRepayments
+        FROM repayments
+        GROUP BY CustomerID
+    ),
+    
+    customer_categories AS (
+        SELECT
+            c.CustomerID,
+            c.Age,
+            c.CorrectedAge,
+            c.Gender,
+            COALESCE(r.TotalRepayments, 0) AS TotalRepayments,
+            CASE
+                WHEN c.CorrectedAge < 20 THEN 'Teen'
+                WHEN c.CorrectedAge < 30 THEN 'Young Adult'
+                WHEN c.CorrectedAge < 60 THEN 'Adult'
+                ELSE 'Pensioner'
+            END AS AgeCategory
+        FROM corrected_customers c
+        LEFT JOIN repayment_totals r
+            ON c.CustomerID = r.CustomerID
+    )
+    
+    SELECT
+        CustomerID,
+        Age,
+        CorrectedAge,
+        Gender,
+        AgeCategory,
+        DENSE_RANK() OVER (
+            PARTITION BY AgeCategory
+            ORDER BY TotalRepayments DESC
+        ) AS Rank
+    
+    FROM customer_categories
+    
+    ORDER BY CustomerID;
+    """
 
     return qry

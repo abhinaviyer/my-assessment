@@ -41,7 +41,8 @@ def question_2():
     Return the `Name`, `Surname` and `Income` of all female customers in the dataset in descending order of income
     """
 
-    qry = """ SELECT Name, Surname, Income
+    qry = """ 
+    SELECT Name, Surname, Income
     FROM customers
     WHERE Lower(Gender) = 'female'
     ORDER BY Income DESC;
@@ -58,7 +59,8 @@ def question_3():
         str: A DuckDB-compliant SQL query string.
     """
 
-    qry = """ SELECT LoanTerm, (COUNT(CASE WHEN Lower(ApprovalStatus) = 'approved' THEN 1 END) * 100.0) / COUNT(*) AS Percentage_Approved
+    qry = """ 
+    SELECT LoanTerm, (COUNT(CASE WHEN Lower(ApprovalStatus) = 'approved' THEN 1 END) * 100.0) / COUNT(*) AS Percentage_Approved
     FROM loans
     GROUP BY LoanTerm; 
     """
